@@ -12,11 +12,34 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { LoginBody, LoginBodyType, RegisterBody, RegisterBodyType } from "@/schemaValidations/auth.schema"
-import evnConfig from "@/lib/config"
-import { effect } from "zod/v3"
-import { use, useEffect } from "react"
+import { LoginBody, LoginBodyType } from "@/schemaValidations/auth.schema"
+import envConfig from "@/lib/config"
 
+// Service helpers (tách nhưng vẫn trong cùng file)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function loginExternal(values: LoginBodyType): Promise<{ status: number; payload: any }> {
+    const res = await fetch(`${envConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+    })
+
+    const payload = await res.json()
+    const data = { status: res.status, payload }
+
+    if (!res.ok) throw data
+    return data
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function postToNextAuth(payload: any) {
+    const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    })
+    return res
+}
 
 const LoginForm = () => {
 
@@ -32,43 +55,22 @@ const LoginForm = () => {
     async function onSubmit(values: LoginBodyType) {
 
         try {
-            const result = await fetch(
-                `${evnConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/login`, {
-                body: JSON.stringify(values),
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                method: 'POST'
-            }).then(async (res) => {
-                const payload = await res.json()
-                const data = {
-                    status: res.status,
-                    payload
-                }
-                if (!res.ok) {
-                    throw data
-                }
-                return data
-            })
-            const resultFormNextServer = await fetch('/api/auth', {
-                method: 'POST',
-                body: JSON.stringify(result.payload),
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-            })
+            const result = await loginExternal(values)
+
+            const resultFormNextServer = await postToNextAuth(result.payload)
             console.log(resultFormNextServer)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
-            const errors = error.payload.errors as {
+            const errors = error.payload?.errors as {
                 field: string,
                 message: string
-            }[]
-            const status = error.status as number
-            if (status === 422) {
-                errors.forEach((error) => {
-                    form.setError(error.field as 'email' | 'password', {
+            }[] | undefined
+            const status = error.status as number | undefined
+            if (status === 422 && errors) {
+                errors.forEach((err) => {
+                    form.setError(err.field as 'email' | 'password', {
                         type: "server",
-                        message: error.message
+                        message: err.message
                     })
                 })
             }
@@ -88,7 +90,7 @@ const LoginForm = () => {
                         <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input placeholder="..." type="email "{...field} />
+                                <Input placeholder="..." type="email" {...field} />
                             </FormControl>
 
                             <FormMessage />

@@ -13,14 +13,31 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { RegisterBody, RegisterBodyType } from "@/schemaValidations/auth.schema"
-import evnConfig from "@/lib/config"
-import { effect } from "zod/v3"
-import { use, useEffect } from "react"
+import envConfig from "@/lib/config"
+import { useEffect } from "react"
 
+// Service helpers (tách nhưng vẫn trong cùng file)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ApiResult = { status: number; payload: any }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function registerExternal(values: RegisterBodyType): Promise<ApiResult> {
+    const res = await fetch(`${envConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+    })
+
+    const payload = await res.json()
+    const data = { status: res.status, payload }
+
+    if (!res.ok) throw data
+    return data
+}
 
 const RegisterForm = () => {
     useEffect(() => {
-        console.log(evnConfig.NEXT_PUBLIC_API_ENDPOINT)
+        console.log(envConfig.NEXT_PUBLIC_API_ENDPOINT)
     }, [])
 
     const form = useForm<RegisterBodyType>({
@@ -35,14 +52,26 @@ const RegisterForm = () => {
 
     // 2. Define a submit handler.
     async function onSubmit(values: RegisterBodyType) {
-        const result = await fetch(`${evnConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/register`, {
-            body: JSON.stringify(values),
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            method: 'POST'
-        }).then((res) => res.json())
-        console.log(result)
+        try {
+            const result = await registerExternal(values)
+            console.log(result)
+            // xử lý tiếp theo khi đăng ký thành công (redirect / hiển thị thông báo ...)
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } catch (error: any) {
+            const errors = error.payload?.errors as { field: string; message: string }[] | undefined
+            const status = error.status as number | undefined
+            if (status === 422 && errors) {
+                errors.forEach((err) => {
+                    form.setError(err.field as "email" | "name" | "password" | "confirmPassword", {
+                        type: "server",
+                        message: err.message,
+                    })
+                })
+            } else {
+                // log hoặc hiển thị lỗi khác
+                console.error(error)
+            }
+        }
     }
 
     return (
@@ -71,7 +100,7 @@ const RegisterForm = () => {
                         <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input placeholder="..." type="email "{...field} />
+                                <Input placeholder="..." type="email" {...field} />
                             </FormControl>
 
                             <FormMessage />
