@@ -18,22 +18,57 @@ import envConfig from "@/lib/config"
 // Service helpers (tách nhưng vẫn trong cùng file)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function loginExternal(values: LoginBodyType): Promise<{ status: number; payload: any }> {
-    const res = await fetch(`${envConfig.NEXT_PUBLIC_API_ENDPOINT}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-    })
+    const url = `http://localhost:8082/api/auth/login`
+    console.log("Đang gọi API:", url)
 
-    const payload = await res.json()
-    const data = { status: res.status, payload }
 
-    if (!res.ok) throw data
-    return data
+    try {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(values),
+        })
+
+        let payload
+        const contentType = res.headers.get("content-type")
+        if (contentType && contentType.includes("application/json")) {
+            try {
+                payload = await res.json()
+            } catch (jsonError) {
+                payload = { message: "Lỗi khi parse JSON response" }
+            }
+        } else {
+            const text = await res.text()
+            payload = { message: text || "Lỗi không xác định" }
+        }
+
+        const data = { status: res.status, payload }
+
+        if (!res.ok) {
+            console.error("API Error:", res.status, payload)
+            throw data
+        }
+        return data
+    } catch (error: any) {
+        // Xử lý lỗi network hoặc lỗi khác
+        if (error.status) {
+            // Đã được xử lý ở trên
+            throw error
+        }
+        console.error("Network Error:", error)
+        throw {
+            status: 0,
+            payload: {
+                message: error.message || "Không thể kết nối đến server. Vui lòng kiểm tra backend có đang chạy không.",
+                errors: []
+            }
+        }
+    }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function postToNextAuth(payload: any) {
-    const res = await fetch("/api/auth", {
+    const res = await fetch("http://localhost:8082/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -66,12 +101,28 @@ const LoginForm = () => {
                 message: string
             }[] | undefined
             const status = error.status as number | undefined
+
+            // Xử lý lỗi 404 hoặc network error
+            if (status === 404 || status === 0) {
+                form.setError("root", {
+                    type: "server",
+                    message: error.payload?.message || "Không tìm thấy API endpoint. Vui lòng kiểm tra backend có đang chạy tại " + envConfig.NEXT_PUBLIC_API_ENDPOINT
+                })
+                return
+            }
+
             if (status === 422 && errors) {
                 errors.forEach((err) => {
                     form.setError(err.field as 'email' | 'password', {
                         type: "server",
                         message: err.message
                     })
+                })
+            } else {
+                // Hiển thị lỗi chung cho các lỗi khác
+                form.setError("root", {
+                    type: "server",
+                    message: error.payload?.message || `Lỗi ${status || "không xác định"}`
                 })
             }
         }
@@ -82,6 +133,11 @@ const LoginForm = () => {
             <form onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-2 max-w-[600px] flex-shrink-0 w-full" noValidate>
 
+                {form.formState.errors.root && (
+                    <div className="text-destructive text-sm">
+                        {form.formState.errors.root.message}
+                    </div>
+                )}
 
                 <FormField
                     control={form.control}

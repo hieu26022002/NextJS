@@ -7,17 +7,6 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    // <main>
-    //   <h1 className="text-3xl font-bold">Hello world!</h1>
-    //   <p>Welcome to Next.js!</p>
-
-    //   <div>
-    //     <h1 className="text-2xl font-bold">Danh sách Profile</h1>
-    //     <Profile name="Hiếu" email="hieu@gmail.com" age={30} />
-    //     <Profile name="Châu" email="chau@gmail.com" age={28} />
-    //   </div>
-    // </main >
-
     <div className="space-y-5 p-5">
       <section className="text-center space-y-3">
         <h1 className="text-2xl font-bold tracking-tight">Chào mừng bạn đến với nước hoa Minh Béo</h1>

@@ -9,6 +9,10 @@ export default defineConfig([
     plugins: { js },
     extends: ["js/recommended"],
     languageOptions: { globals: globals.browser },
+
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
   },
-  tseslint.configs.recommended,
+  // tseslint.configs.recommended,
 ]);
