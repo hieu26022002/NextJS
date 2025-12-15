@@ -21,10 +21,10 @@ import { useEffect } from "react"
 type ApiResult = { status: number; payload: any }
 
 
-async function registerExternal(values: RegisterBodyType): Promise<ApiResult> {
+async function register(values: RegisterBodyType): Promise<ApiResult> {
     const url = `http://localhost:8082/api/auth/register`
     console.log("Đang gọi API:", url)
-    
+
     try {
         const res = await fetch(url, {
             method: "POST",
@@ -87,14 +87,14 @@ const RegisterForm = () => {
     // 2. Define a submit handler.
     async function onSubmit(values: RegisterBodyType) {
         try {
-            const result = await registerExternal(values)
+            const result = await register(values)
             console.log(result)
             // xử lý tiếp theo khi đăng ký thành công (redirect / hiển thị thông báo ...)
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             const errors = error.payload?.errors as { field: string; message: string }[] | undefined
             const status = error.status as number | undefined
-            
+
             // Xử lý lỗi 404 hoặc network error
             if (status === 404 || status === 0) {
                 form.setError("root", {
@@ -103,7 +103,7 @@ const RegisterForm = () => {
                 })
                 return
             }
-            
+
             if (status === 422 && errors) {
                 errors.forEach((err) => {
                     form.setError(err.field as "email" | "name" | "password" | "confirmPassword", {
@@ -125,7 +125,7 @@ const RegisterForm = () => {
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-2 max-w-[600px] flex-shrink-0 w-full" noValidate>
-                
+
                 {form.formState.errors.root && (
                     <div className="text-destructive text-sm">
                         {form.formState.errors.root.message}

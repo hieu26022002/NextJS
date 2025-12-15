@@ -17,7 +17,7 @@ import envConfig from "@/lib/config"
 
 // Service helpers (tách nhưng vẫn trong cùng file)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function loginExternal(values: LoginBodyType): Promise<{ status: number; payload: any }> {
+async function login(values: LoginBodyType): Promise<{ status: number; payload: any }> {
     const url = `http://localhost:8082/api/auth/login`
     console.log("Đang gọi API:", url)
 
@@ -66,15 +66,6 @@ async function loginExternal(values: LoginBodyType): Promise<{ status: number; p
     }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function postToNextAuth(payload: any) {
-    const res = await fetch("http://localhost:8082/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-    })
-    return res
-}
 
 const LoginForm = () => {
 
@@ -90,11 +81,9 @@ const LoginForm = () => {
     async function onSubmit(values: LoginBodyType) {
 
         try {
-            const result = await loginExternal(values)
+            const result = await login(values)
 
-            const resultFormNextServer = await postToNextAuth(result.payload)
-            console.log(resultFormNextServer)
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            console.log("Login successful:", result)
         } catch (error: any) {
             const errors = error.payload?.errors as {
                 field: string,
