@@ -7,7 +7,8 @@ export default function Header() {
             <ul>
                 <li>
                     <Link href='/login'>Đăng nhập</Link><br />
-                    <Link href='/register'>Đăng ký</Link>
+                    <Link href='/register'>Đăng ký</Link><br />
+                    <Link href='/profile'>Tài khoản của tôi</Link>
                 </li>
             </ul>
             <ModeToggle />

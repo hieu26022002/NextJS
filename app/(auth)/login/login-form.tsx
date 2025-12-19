@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ import envConfig from "@/lib/config"
 
 // Service helpers (tách nhưng vẫn trong cùng file)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function login(values: LoginBodyType): Promise<{ status: number; payload: any }> {
+async function loginExternal(values: LoginBodyType): Promise<{ status: number; payload: any }> {
     const url = `http://localhost:8082/api/auth/login`
     console.log("Đang gọi API:", url)
 
@@ -66,9 +67,8 @@ async function login(values: LoginBodyType): Promise<{ status: number; payload: 
     }
 }
 
-
 const LoginForm = () => {
-
+    const router = useRouter()
     const form = useForm<LoginBodyType>({
         resolver: zodResolver(LoginBody),
         defaultValues: {
@@ -81,9 +81,28 @@ const LoginForm = () => {
     async function onSubmit(values: LoginBodyType) {
 
         try {
-            const result = await login(values)
+            const result = await loginExternal(values)
+            console.log("Login result:", result)
 
-            console.log("Login successful:", result)
+            // Thử các cấu trúc response khác nhau
+            const token = result.payload?.data?.access_token
+                || result.payload?.access_token
+                || result.payload?.token
+
+            if (token) {
+                localStorage.setItem("access_token", token)
+                // Lưu vào cookies để middleware có thể kiểm tra
+                document.cookie = `access_token=${token}; path=/; max-age=86400`
+                console.log("Token lưu thành công:", token)
+                // Redirect sang profile
+                router.push("/profile")
+            } else {
+                console.error("Không tìm thấy access_token trong response:", result.payload)
+                form.setError("root", {
+                    type: "server",
+                    message: "Đăng nhập thất bại: Không tìm thấy token"
+                })
+            }
         } catch (error: any) {
             const errors = error.payload?.errors as {
                 field: string,
