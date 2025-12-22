@@ -48,7 +48,6 @@ export default function ProfilePage() {
     
                 const resData = await res.json()
                 console.log("User data:", resData)
-                // ✅ FIX CHÍNH XÁC
                 setUser(resData.data)
     
             } catch (err) {
@@ -90,6 +89,10 @@ export default function ProfilePage() {
                 <form
                     onSubmit={async e => {
                         e.preventDefault()
+                        if (!user) {
+                            alert("Không tìm thấy thông tin người dùng")
+                            return
+                        }
                         const token = localStorage.getItem("access_token")
                         if (!token) {
                             alert("Token không tồn tại. Vui lòng đăng nhập lại")
@@ -103,13 +106,25 @@ export default function ProfilePage() {
                                     "Content-Type": "application/json",
                                     Authorization: `Bearer ${token}`,
                                 },
-                                body: JSON.stringify({ name: user.name }),
+                                body: JSON.stringify({ name: user.name, email: user.email }),
                             })
 
-                            if (!res.ok) {
-                                throw new Error(`Lỗi: ${res.status}`)
+                            if (res.status === 401) {
+                                alert("Vui lòng đăng nhập lại")
+                                localStorage.removeItem("access_token")
+                                router.push("/login")
+                                return
                             }
 
+                            if (!res.ok) {
+                                const resText = await res.text()
+                                throw new Error(`Lỗi: ${res.status} - ${resText || "Không rõ nguyên nhân"}`)
+                            }
+
+                            const resData = await res.json().catch(() => null)
+                            if (resData?.data) {
+                                setUser(resData.data)
+                            }
                             alert("Cập nhật thành công")
                         } catch (err) {
                             alert(err instanceof Error ? err.message : "Có lỗi xảy ra")
@@ -121,7 +136,9 @@ export default function ProfilePage() {
                         <label className="block text-sm font-medium mb-1">Email:</label>
                         <input
                             value={user.email}
-                            disabled
+                            onChange={e =>
+                                setUser({ ...user, email: e.target.value })
+                            }
                             className="border p-2 w-full rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
